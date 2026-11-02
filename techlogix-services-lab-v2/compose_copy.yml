@@ -1,0 +1,118 @@
+
+services:
+  oi-client:
+    build: ./oi-client
+    container_name: oi-client
+    ports:
+      - "80:80"
+    depends_on:
+      - oi-gateway
+    networks:
+      - app-network
+
+  oi-gateway:
+    build: ./oi-gateway
+    container_name: oi-gateway
+    environment:
+      PORT: "8080"
+      ATTENDANCE_URL: "http://oi-attendence:8080"
+      CORE_URL: "http://oi-core:8080"
+      TRACK_URL: "http://oi-track:8080"
+    ports:
+      - "5002:8080"
+    depends_on:
+      - oi-attendence
+      - oi-core
+      - oi-track
+    networks:
+      - app-network
+
+  oi-attendence:
+    build: ./oi-attendence
+    container_name: oi-attendence
+    environment:      
+      PORT: "8080"
+      CORE_URL: "http://oi-core:8080"
+      DB_HOST: oi-db
+      DB_PORT: "5432"
+      DB_NAME: techlogix_lab
+      DB_USER: app_user
+      DB_PASSWORD: ${DB_PASSWORD:-change_me_local}
+      DB_SCHEMA: attendance
+      SERVICE_NAME: oi-attendence
+    ports:
+      - "5003:8080"
+    depends_on:
+      oi-db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  oi-core:
+    build: ./oi-core
+    container_name: oi-core
+    environment:
+      PORT: "8080"
+      TRACK_URL: "http://oi-track:8080"
+      DB_HOST: oi-db
+      DB_PORT: "5432"
+      DB_NAME: techlogix_lab
+      DB_USER: app_user
+      DB_PASSWORD: ${DB_PASSWORD:-change_me_local}
+      DB_SCHEMA: core
+      SERVICE_NAME: oi-core
+    ports:
+      - "5004:8080"
+    depends_on:
+      oi-db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  oi-track:
+    build: ./oi-track
+    container_name: oi-track
+    environment:
+      PORT: "8080"
+      DB_HOST: oi-db
+      DB_PORT: "5432"
+      DB_NAME: techlogix_lab
+      DB_USER: app_user
+      DB_PASSWORD: ${DB_PASSWORD:-change_me_local}
+      DB_SCHEMA: track
+      SERVICE_NAME: oi-track
+    # Removed To Prevent Track Service Access by USER
+    # ports:
+    #   - "5005:8080"
+    depends_on:
+      oi-db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  oi-db:
+    image: postgres:16-alpine
+    container_name: oi-db
+    environment:
+      POSTGRES_DB: techlogix_lab
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me_local}
+    ports:
+      - "5006:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d techlogix_lab"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge

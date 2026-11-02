@@ -1,0 +1,16 @@
+services:
+  haproxy:
+    image: haproxy:3.2-alpine
+    container_name: techlogix-haproxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./config/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    networks:
+      - techlogix-shared
+
+networks:
+  techlogix-shared:
+    external: true
+    name: techlogix-shared

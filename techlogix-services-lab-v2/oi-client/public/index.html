@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Techlogix Services Lab</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+  <main class="container">
+    <header>
+      <h1>Techlogix Services Lab</h1>
+      <h1>VERSION@2</h1>
+      <p>Simple API functionality testing</p>
+    </header>
+
+    <section class="services">
+      <!-- Attendance -->
+      <article class="service">
+        <h2>Attendance</h2>
+
+        <button data-service="attendance" data-method="GET">
+          GET Attendance
+        </button>
+
+        <form data-service="attendance">
+          <input name="name" placeholder="Attendance name" required>
+          <button type="submit">POST</button>
+        </form>
+      </article>
+
+      <!-- Core -->
+      <article class="service">
+        <h2>Core Services</h2>
+
+        <button data-service="core" data-method="GET">
+          GET Core
+        </button>
+
+        <form data-service="core">
+          <input name="name" placeholder="Core record name" required>
+          <button type="submit">POST</button>
+        </form>
+      </article>
+
+      <!-- Track -->
+      <article class="service">
+        <h2>Track</h2>
+
+        <button data-service="track" data-method="GET">
+          GET Track
+        </button>
+
+        <form data-service="track">
+          <input name="name" placeholder="Track record name" required>
+          <button type="submit">POST</button>
+        </form>
+      </article>
+    </section>
+
+    <section class="response">
+      <h2>API Response</h2>
+
+      <div class="request-info">
+        <p>
+          <strong>Request URL:</strong>
+          <code id="request-url">-</code>
+        </p>
+
+        <p>
+          <strong>Method:</strong>
+          <code id="request-method">-</code>
+        </p>
+
+        <p>
+          <strong>Status:</strong>
+          <span id="status">Waiting</span>
+        </p>
+      </div>
+
+      <pre id="output">Click GET or submit a POST request.</pre>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

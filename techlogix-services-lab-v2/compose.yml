@@ -1,0 +1,100 @@
+services:
+  oi-client:
+    build: ./oi-client
+    networks:
+      shared:
+        aliases:
+          - oi-client-v2
+
+  oi-gateway:
+    build: ./oi-gateway
+    environment:
+      PORT: "8080"
+      ATTENDANCE_URL: "http://oi-attendence:8080"
+      CORE_URL: "http://oi-core:8080"
+    depends_on:
+      oi-attendence:
+        condition: service_started
+      oi-core:
+        condition: service_started
+    networks:
+      shared:
+        aliases:
+          - oi-gateway-v2
+      gateway-network: {}
+
+  oi-attendence:
+    build: ./oi-attendence
+    environment:
+      PORT: "8080"
+      CORE_URL: "http://oi-core:8080"
+      DB_HOST: oi-db
+      DB_PORT: "5432"
+      DB_NAME: techlogix_lab
+      DB_USER: app_user
+      DB_PASSWORD: ${DB_PASSWORD:-change_me_local}
+      DB_SCHEMA: attendance
+      SERVICE_NAME: oi-attendence
+    networks:
+      - gateway-network
+      - db-network
+
+  oi-core:
+    build: ./oi-core
+    environment:
+      PORT: "8080"
+      TRACK_URL: "http://oi-track:8080"
+      DB_HOST: oi-db
+      DB_PORT: "5432"
+      DB_NAME: techlogix_lab
+      DB_USER: app_user
+      DB_PASSWORD: ${DB_PASSWORD:-change_me_local}
+      DB_SCHEMA: core
+      SERVICE_NAME: oi-core
+    depends_on:
+      oi-track:
+        condition: service_healthy
+    networks:
+      - gateway-network
+      - core-track-network
+      - db-network
+
+  oi-track:
+    build: ./oi-track
+    environment:
+      PORT: "8080"
+      DB_HOST: oi-db
+      DB_PORT: "5432"
+      DB_NAME: techlogix_lab
+      DB_USER: app_user
+      DB_PASSWORD: ${DB_PASSWORD:-change_me_local}
+      DB_SCHEMA: track
+      SERVICE_NAME: oi-track
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:8080/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - core-track-network
+      - db-network
+
+networks:
+  core-track-network:
+    driver: bridge
+    internal: true
+
+  db-network:
+    external: true
+    name: techlogix-db-network
+
+  gateway-network:
+    driver: bridge
+
+  shared:
+    external: true
+    name: techlogix-shared
