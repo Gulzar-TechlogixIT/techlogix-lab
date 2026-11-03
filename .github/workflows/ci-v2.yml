@@ -1,0 +1,60 @@
+
+name: V2 CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "techlogix-services-lab-v2/**"
+      - ".github/workflows/ci-v2.yml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "techlogix-services-lab-v2/**"
+      - ".github/workflows/ci-v2.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-validate:
+    name: Validate and Build V2
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: techlogix-services-lab-v2
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Validate JavaScript syntax
+        run: |
+          node --check oi-gateway/app.js
+          node --check oi-attendence/app.js
+          node --check oi-core/app.js
+          node --check oi-track/app.js
+          node --check oi-client/public/app.js
+
+      - name: Validate Docker Compose
+        env:
+          DB_PASSWORD: ci_dummy_password
+        run: |
+          docker compose -f compose.yml config -q
+
+      - name: Build Docker images
+        env:
+          DB_PASSWORD: ci_dummy_password
+        run: |
+          docker compose -f compose.yml build
