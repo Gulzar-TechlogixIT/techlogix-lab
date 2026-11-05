@@ -11,13 +11,59 @@ const service = process.env.SERVICE_NAME || schema;
 const trackUrl = process.env.TRACK_URL || 'http://oi-track:8080';
 
 // PostgreSQL connection pool
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: Number(process.env.DB_PORT || 5432),
+// PostgreSQL read/write connection pools.
+// Writes always use the primary; ordinary reads use the streaming replica.
+const legacyDbHost = process.env.DB_HOST || 'localhost';
+const legacyDbPort = Number(process.env.DB_PORT || 5432);
+
+const poolOptions = {
   database: process.env.DB_NAME || 'techlogix_lab',
   user: process.env.DB_USER || 'app_user',
-  password: process.env.DB_PASSWORD || 'change_me_local',
+  password: process.env.DB_PASSWORD,
+  max: Number(process.env.DB_POOL_MAX || 10),
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+  keepAlive: true,
+};
+
+const writePool = new Pool({
+  ...poolOptions,
+  host: process.env.DB_WRITE_HOST || legacyDbHost,
+  port: Number(process.env.DB_WRITE_PORT || legacyDbPort),
+  application_name: `${service}-write`,
 });
+
+const readPool = new Pool({
+  ...poolOptions,
+  host: process.env.DB_READ_HOST || process.env.DB_WRITE_HOST || legacyDbHost,
+  port: Number(process.env.DB_READ_PORT || process.env.DB_WRITE_PORT || legacyDbPort),
+  application_name: `${service}-read`,
+});
+
+writePool.on('error', (error) => {
+  console.error(`[${service}] PostgreSQL write pool error:`, error.message);
+});
+
+readPool.on('error', (error) => {
+  console.error(`[${service}] PostgreSQL read pool error:`, error.message);
+});
+
+// Verify that HAProxy sends writes to the primary and reads to the standby.
+async function checkDatabase() {
+  const [writeCheck, readCheck] = await Promise.all([
+    writePool.query('SELECT pg_is_in_recovery() AS in_recovery'),
+    readPool.query('SELECT pg_is_in_recovery() AS in_recovery'),
+  ]);
+
+  if (writeCheck.rows[0].in_recovery !== false) {
+    throw new Error('Write database endpoint is not the PostgreSQL primary');
+  }
+
+  if (readCheck.rows[0].in_recovery !== true) {
+    throw new Error('Read database endpoint is not the PostgreSQL replica');
+  }
+}
+
 
 // Send JSON response
 function send(res, status, data) {
@@ -54,7 +100,7 @@ const server = http.createServer(async (req, res) => {
   // Health check endpoint
   if (req.url === '/health') {
     try {
-      await pool.query('SELECT 1');
+      await checkDatabase();
 
       return send(res, 200, {
         service,
@@ -76,7 +122,13 @@ const server = http.createServer(async (req, res) => {
     // GET: Fetch all items
     if (req.method === 'GET') {
       try {
-        const result = await pool.query(`
+        const requestUrl = new URL(req.url, 'http://localhost');
+        const strongRead =
+          requestUrl.searchParams.get('consistency') === 'strong' ||
+          req.headers['x-read-consistency'] === 'strong';
+        const queryPool = strongRead ? writePool : readPool;
+
+        const result = await queryPool.query(`
           SELECT id, name, created_at
           FROM ${schema}.items
           ORDER BY id DESC
@@ -117,7 +169,7 @@ const server = http.createServer(async (req, res) => {
           }
 
           // Insert item into the database
-          const result = await pool.query(
+          const result = await writePool.query(
             `
               INSERT INTO ${schema}.items (name)
               VALUES ($1)

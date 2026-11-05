@@ -1,0 +1,103 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Techlogix Services Lab</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+  <main class="shell">
+
+    <header>
+      <div class="eyebrow">TECHLOGIX · SERVICES LAB</div>
+      <h1>Service Console</h1>
+      <p>
+        One client UI to access Attendance, Core, and Track through the gateway.
+      </p>
+    </header>
+
+    <section class="cards">
+
+      <article class="card">
+        <h2>Attendance</h2>
+        <p>Read or add attendance entries.</p>
+
+        <button data-service="attendance">
+          Load attendance
+        </button>
+
+        <form data-form="attendance">
+          <input
+            name="name"
+            placeholder="Attendance entry name"
+            required
+          >
+          <button type="submit" class="secondary">Add</button>
+        </form>
+      </article>
+
+      <article class="card">
+        <h2>Core</h2>
+        <p>Read or add core records.</p>
+
+        <button data-service="core">
+          Load core
+        </button>
+
+        <form data-form="core">
+          <input
+            name="name"
+            placeholder="Core record name"
+            required
+          >
+          <button type="submit" class="secondary">Add</button>
+        </form>
+      </article>
+
+      <article class="card">
+        <h2>Track</h2>
+        <p>Read or add tracking records.</p>
+
+        <button data-service="track">
+          Load track
+        </button>
+
+        <form data-form="track">
+          <input
+            name="name"
+            placeholder="Track record name"
+            required
+          >
+          <button type="submit" class="secondary">Add</button>
+        </form>
+      </article>
+
+    </section>
+
+    <section class="response">
+
+      <div class="response-head">
+        <div>
+          <div class="eyebrow">API RESPONSE</div>
+          <h2 id="response-title">Ready</h2>
+        </div>
+
+        <span id="status">Waiting</span>
+      </div>
+
+      <pre id="output">Choose a service above to make a request.</pre>
+
+    </section>
+
+    <footer>
+      Client → Gateway → Service → PostgreSQL
+    </footer>
+
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

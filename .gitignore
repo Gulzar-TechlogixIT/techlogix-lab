@@ -1,0 +1,15 @@
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Database backups
+*.dump
+*.backup
+
+# Private keys and certificates
+*.pem
+*.key
+
+# Local development
+.DS_Store

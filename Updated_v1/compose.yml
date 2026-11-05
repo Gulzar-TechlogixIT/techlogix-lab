@@ -1,0 +1,108 @@
+services:
+  oi-client:
+    build:
+      context: ./oi-client
+    restart: unless-stopped
+    networks:
+      app-network: {}
+      shared:
+        aliases:
+          - oi-client-v1
+
+  oi-gateway:
+    build:
+      context: ./oi-gateway
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      ATTENDANCE_URL: "http://oi-attendence:8080"
+      CORE_URL: "http://oi-core:8080"
+    depends_on:
+      - oi-attendence
+      - oi-core
+    networks:
+      app-network: {}
+      shared:
+        aliases:
+          - oi-gateway-v1
+
+  oi-attendence:
+    build:
+      context: ./oi-attendence
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      CORE_URL: "http://oi-core:8080"
+      DB_WRITE_HOST: techlogix-haproxy
+      DB_WRITE_PORT: "5432"
+      DB_READ_HOST: techlogix-haproxy
+      DB_READ_PORT: "5433"
+      DB_NAME: techlogix_lab
+      DB_USER: app_user
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in your .env file}
+      DB_SCHEMA: attendance
+      SERVICE_NAME: oi-attendence
+    networks:
+      - app-network
+      - db-network
+
+  oi-core:
+    build:
+      context: ./oi-core
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      TRACK_URL: "http://oi-track:8080"
+      DB_WRITE_HOST: techlogix-haproxy
+      DB_WRITE_PORT: "5432"
+      DB_READ_HOST: techlogix-haproxy
+      DB_READ_PORT: "5433"
+      DB_NAME: techlogix_lab
+      DB_USER: app_user
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in your .env file}
+      DB_SCHEMA: core
+      SERVICE_NAME: oi-core
+    depends_on:
+      - oi-track
+    networks:
+      - app-network
+      - db-network
+      - core-track-network
+
+  oi-track:
+    build:
+      context: ./oi-track
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      DB_WRITE_HOST: techlogix-haproxy
+      DB_WRITE_PORT: "5432"
+      DB_READ_HOST: techlogix-haproxy
+      DB_READ_PORT: "5433"
+      DB_NAME: techlogix_lab
+      DB_USER: app_user
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in your .env file}
+      DB_SCHEMA: track
+      SERVICE_NAME: oi-track
+    networks:
+      - db-network
+      - core-track-network
+
+networks:
+  app-network:
+    name: tech-v1-net
+    driver: bridge
+    internal: true
+
+  core-track-network:
+    name: tech-v1-core-track-net
+    driver: bridge
+    internal: true
+
+  db-network:
+    name: tech-db-net
+    external: true
+
+  shared:
+    name: tech-shared
+    external: true

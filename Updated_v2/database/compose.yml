@@ -1,0 +1,28 @@
+services:
+  oi-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: techlogix_lab
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d techlogix_lab"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    networks:
+      shared:
+        aliases:
+          - oi-db
+
+volumes:
+  postgres_data:
+    external: true
+    name: techlogix-v1_postgres_data
+
+networks:
+  shared:
+    external: true
+    name: techlogix-shared

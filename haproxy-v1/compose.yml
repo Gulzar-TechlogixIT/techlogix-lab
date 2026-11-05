@@ -1,16 +1,178 @@
 services:
+  haproxy-runtime-init:
+    image: alpine:3.22
+    container_name: haproxy-runtime-init
+    user: "0:0"
+    command:
+      - sh
+      - -c
+      - |
+        mkdir -p /var/run/haproxy
+        chown 99:99 /var/run/haproxy
+        chmod 770 /var/run/haproxy
+    volumes:
+      - haproxy_runtime:/var/run/haproxy
+    restart: "no"
+
+  role-check:
+    build:
+      context: ./role-check
+    restart: unless-stopped
+    environment:
+      DB_HOST_PRIMARY: oi-db
+      DB_HOST_REPLICA: oi-db-replica
+      DB_PORT: "5432"
+      DB_NAME: techlogix_lab
+      DB_USER: app_user
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      AGENT_PORT_PRIMARY_PRIMARY: "9101"
+      AGENT_PORT_PRIMARY_REPLICA: "9102"
+      AGENT_PORT_REPLICA_PRIMARY: "9103"
+      AGENT_PORT_REPLICA_REPLICA: "9104"
+    networks:
+      tech-db-net:
+        ipv4_address: 192.168.0.17
+        aliases:
+          - pg-role-check
+
   haproxy:
     image: haproxy:3.2-alpine
     container_name: techlogix-haproxy
     restart: unless-stopped
+    depends_on:
+      role-check:
+        condition: service_started
+      haproxy-runtime-init:
+        condition: service_completed_successfully
     ports:
       - "80:80"
     volumes:
       - ./config/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - haproxy_runtime:/var/run/haproxy
     networks:
-      - techlogix-shared
+      - tech-shared
+      - tech-db-net
+      - techlogix-patroni-net
+
+  traffic-controller:
+    build: ./controller
+    container_name: techlogix-traffic-controller
+    restart: unless-stopped
+    depends_on:
+      haproxy:
+        condition: service_started
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - haproxy_runtime:/var/run/haproxy
+    networks:
+      - tech-shared
+
+volumes:
+  haproxy_runtime:
 
 networks:
-  techlogix-shared:
+  tech-shared:
     external: true
-    name: techlogix-shared
+    name: tech-shared
+
+  tech-db-net:
+    external: true
+    name: tech-db-net
+
+  techlogix-patroni-net:
+    external: true
+    name: techlogix-patroni-net    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# volumes:
+#   haproxy_runtime:
+
+# services:
+#   role-check:
+#     build:
+#       context: ./role-check
+#     restart: unless-stopped
+#     environment:
+#       DB_HOST_PRIMARY: oi-db
+#       DB_HOST_REPLICA: oi-db-replica
+#       DB_PORT: "5432"
+#       DB_NAME: techlogix_lab
+#       DB_USER: app_user
+#       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+#       AGENT_PORT_PRIMARY_PRIMARY: "9101"
+#       AGENT_PORT_PRIMARY_REPLICA: "9102"
+#       AGENT_PORT_REPLICA_PRIMARY: "9103"
+#       AGENT_PORT_REPLICA_REPLICA: "9104"
+#     networks:
+#       tech-db-net:
+#         ipv4_address: 192.168.0.17
+#         aliases:
+#           - pg-role-check
+
+#   haproxy:
+#     image: haproxy:3.2-alpine
+#     container_name: techlogix-haproxy
+#     restart: unless-stopped
+#     depends_on:
+#       - role-check
+#     ports:
+#       - "80:80"
+#     volumes:
+#       - ./config/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+#       - haproxy_runtime:/var/run/haproxy
+#     networks:
+#       - tech-shared
+#       - tech-db-net
+
+#   traffic-controller:
+#     build: ./controller
+#     container_name: techlogix-traffic-controller
+#     restart: unless-stopped
+#     depends_on:
+#       - haproxy
+#     ports:
+#       - "127.0.0.1:9090:9090"
+#     volumes:
+#       - haproxy_runtime:/var/run/haproxy
+#     networks:
+#       - tech-shared
+
+#   haproxy-runtime-init:
+#     image: alpine:3.22
+#     user: "0:0"
+#     command:
+#       - sh
+#       - -c
+#       - chown 99:99 /var/run/haproxy && chmod 770 /var/run/haproxy
+#     volumes:
+#       - haproxy_runtime:/var/run/haproxy
+#     restart: "no"
+
+
+# networks:
+#   tech-shared:
+#     external: true
+#     name: tech-shared
+
+#   tech-db-net:
+#     external: true
+#     name: tech-db-net

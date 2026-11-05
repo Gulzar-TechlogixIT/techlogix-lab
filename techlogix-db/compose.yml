@@ -1,0 +1,72 @@
+services:
+  oi-db:
+    image: postgres:16-alpine
+    container_name: oi-db
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: app_user
+      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:?Set REPLICATION_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      POSTGRES_DB: techlogix_lab
+
+    command:
+      - postgres
+      - -c
+      - wal_level=replica
+      - -c
+      - max_wal_senders=10
+      - -c
+      - max_replication_slots=10
+      - -c
+      - password_encryption=scram-sha-256
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+
+    volumes:
+      - techlogix-services-lab_postgres_data:/var/lib/postgresql/data
+      - ./postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+
+    networks:
+      tech-db-net:
+        aliases:
+          - oi-db
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d techlogix_lab"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  oi-db-replica:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      oi-db:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: app_user
+      POSTGRES_DB: techlogix_lab
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:?Set REPLICATION_PASSWORD}
+    entrypoint: ["/bin/sh", "/replica-entrypoint.sh"]
+    volumes:
+      - replica_data:/var/lib/postgresql/data
+      - ./replica-entrypoint.sh:/replica-entrypoint.sh:ro
+    networks:
+      - shared
+      - tech-db-net
+volumes:
+  techlogix-services-lab_postgres_data:
+    external: true
+  replica_data:
+    name: techlogix-replica-data
+
+networks:
+  shared:
+    external: true
+    name: techlogix-shared
+
+  tech-db-net:
+    external: true
+    name: tech-db-net

@@ -30,8 +30,10 @@ services:
     environment:
       PORT: "8080"
       CORE_URL: "http://oi-core:8080"
-      DB_HOST: oi-db
-      DB_PORT: "5432"
+      DB_WRITE_HOST: techlogix-haproxy
+      DB_WRITE_PORT: "5432"
+      DB_READ_HOST: techlogix-haproxy
+      DB_READ_PORT: "5433"
       DB_NAME: techlogix_lab
       DB_USER: app_user
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in your .env file}
@@ -47,8 +49,10 @@ services:
     environment:
       PORT: "8080"
       TRACK_URL: "http://oi-track:8080"
-      DB_HOST: oi-db
-      DB_PORT: "5432"
+      DB_WRITE_HOST: techlogix-haproxy
+      DB_WRITE_PORT: "5432"
+      DB_READ_HOST: techlogix-haproxy
+      DB_READ_PORT: "5433"
       DB_NAME: techlogix_lab
       DB_USER: app_user
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in your .env file}
@@ -64,8 +68,10 @@ services:
     restart: unless-stopped
     environment:
       PORT: "8080"
-      DB_HOST: oi-db
-      DB_PORT: "5432"
+      DB_WRITE_HOST: techlogix-haproxy
+      DB_WRITE_PORT: "5432"
+      DB_READ_HOST: techlogix-haproxy
+      DB_READ_PORT: "5433"
       DB_NAME: techlogix_lab
       DB_USER: app_user
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in your .env file}
